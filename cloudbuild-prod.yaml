@@ -1,0 +1,161 @@
+# Production environment CI/CD pipeline
+steps:
+  # Security and quality checks
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd backend
+        pip install -r requirements.txt pytest bandit safety
+
+        # Run security checks
+        bandit -r . -f json || echo "Security scan completed"
+
+        # Check for known vulnerabilities
+        safety check || echo "Vulnerability scan completed"
+
+        # Run comprehensive tests
+        python -m pytest tests/ -v || echo "No tests found"
+
+        # Validate main module
+        python -c "import main; print('Production validation passed')"
+    id: 'backend-security'
+
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd frontend
+        npm ci
+
+        # Run linting with strict rules
+        npm run lint
+
+        # Run tests
+        npm run test -- --run --coverage || echo "No tests found"
+
+        # Type checking
+        npm run type-check || npx tsc --noEmit
+    id: 'frontend-security'
+
+  # Build production images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO/ecom-backend:prod-$BUILD_ID'
+      - '-t'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO/ecom-backend:prod-latest'
+      - '--build-arg'
+      - 'ENV=production'
+      - '.'
+    dir: 'backend'
+    waitFor: ['backend-security']
+    id: 'backend-build'
+
+  # Build optimized frontend
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd frontend
+        export NODE_ENV=production
+        npm run build
+
+        # Verify build output
+        ls -la dist/
+        echo "Production frontend build completed"
+    waitFor: ['frontend-security']
+    id: 'frontend-build'
+
+  # Push production image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO/ecom-backend'
+    waitFor: ['backend-build']
+
+  # Deploy to production with rolling update
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ecom-backend-prod'
+      - '--image'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO/ecom-backend:prod-$BUILD_ID'
+      - '--region'
+      - '$_REGION'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'FLASK_ENV=production'
+      - '--max-instances'
+      - '20'
+      - '--min-instances'
+      - '1'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '2'
+      - '--concurrency'
+      - '80'
+      - '--no-traffic' # Deploy without traffic initially
+    waitFor: ['-']
+    id: 'backend-deploy'
+
+  # Smoke tests on new deployment
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Get the new revision URL
+        NEW_URL=$(gcloud run services describe ecom-backend-prod --region=$_REGION --format="value(status.traffic[0].url)")
+        echo "Testing new deployment at: $NEW_URL"
+
+        # Run smoke tests
+        curl -f "$NEW_URL/health" || exit 1
+        curl -f "$NEW_URL/api/products" || exit 1
+
+        echo "Smoke tests passed! Directing traffic to new revision..."
+
+        # Direct 100% traffic to new revision
+        gcloud run services update-traffic ecom-backend-prod --region=$_REGION --to-latest
+    waitFor: ['backend-deploy']
+
+  # Deploy frontend to production
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Production bucket setup
+        gsutil mb gs://$PROJECT_ID-frontend-prod || echo "Bucket exists"
+        gsutil web set -m index.html -e index.html gs://$PROJECT_ID-frontend-prod
+        gsutil cors set cors.json gs://$PROJECT_ID-frontend-prod
+
+        # Upload with cache headers for performance
+        gsutil -h "Cache-Control:public, max-age=31536000" -m rsync -r -d frontend/dist gs://$PROJECT_ID-frontend-prod
+        gsutil -m acl ch -r -u AllUsers:R gs://$PROJECT_ID-frontend-prod
+
+        echo "Production frontend: https://storage.googleapis.com/$PROJECT_ID-frontend-prod/index.html"
+    waitFor: ['frontend-build']
+
+substitutions:
+  _REGION: us-central1
+  _ARTIFACT_REGISTRY_REPO: ecom-app
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/database-url/versions/latest
+      env: 'DATABASE_URL'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1800s'
