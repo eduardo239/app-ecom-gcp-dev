@@ -1,0 +1,50 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/ecom-backend:$COMMIT_SHA', '.']
+    dir: 'backend'
+
+  # Push the image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/ecom-backend:$COMMIT_SHA']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ecom-backend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/ecom-backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'DATABASE_URL=$$DATABASE_URL,FLASK_ENV=production'
+
+  # Build frontend
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd frontend
+        npm ci
+        npm run build
+
+  # Deploy frontend to Cloud Storage
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil -m rsync -r -d frontend/dist gs://$PROJECT_ID-frontend
+
+images:
+  - 'gcr.io/$PROJECT_ID/ecom-backend:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
