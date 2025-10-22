@@ -274,3 +274,19 @@ git config --global alias.bc 'branch -vv'
 echo "✅ Git safety measures configured!"
 echo "💡 Use 'git pushn' for dry runs and 'git pushd' for develop pushes"
 ```
+
+##
+
+# Instead of "git push", use:
+
+```bash
+git pushn    # Dry run - see what WOULD be pushed (safe testing)
+git pushd    # Always push to develop branch
+git pushm    # Explicit push to main (with safety prompts)
+git pushf    # Safer force push (--force-with-lease)
+
+# Quick status checks:
+git st       # Compact status view
+git rc       # Show all remotes
+git bc       # Show branch tracking info
+```
