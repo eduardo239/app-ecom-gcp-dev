@@ -9,7 +9,7 @@ on:
     types: [published]
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || 'app-xyz-dev' }}
   REGION: us-central1
   ARTIFACT_REGISTRY_REPO: ecom-app
 
@@ -74,6 +74,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Debug Environment Variables
+        run: |
+          echo "PROJECT_ID: $PROJECT_ID"
+          echo "REGION: $REGION" 
+          echo "ARTIFACT_REGISTRY_REPO: $ARTIFACT_REGISTRY_REPO"
+          echo "Full Docker path: $REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REGISTRY_REPO/ecom-backend:dev-${{ github.sha }}"
 
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
