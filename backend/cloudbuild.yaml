@@ -1,0 +1,31 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_SERVICE_NAME/$_SERVICE_NAME:$BUILD_ID'
+      - '-t'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_SERVICE_NAME/$_SERVICE_NAME:latest'
+      - '.'
+    dir: 'backend'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_SERVICE_NAME/$_SERVICE_NAME'
+
+# Store images in Artifact Registry
+images:
+  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_SERVICE_NAME/$_SERVICE_NAME:latest'
+
+# Default substitutions
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: ecom-backend
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

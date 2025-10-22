@@ -101,7 +101,8 @@ gcloud auth configure-docker $REGION-docker.pkg.dev 2>/dev/null || echo "Docker 
 
 # Build Docker image
 echo "🔨 Building Docker image..."
-gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT_ID/$BACKEND_SERVICE/$BACKEND_SERVICE:latest
+echo "Using image: $REGION-docker.pkg.dev/$PROJECT_ID/$BACKEND_SERVICE/$BACKEND_SERVICE:latest"
+gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT_ID/$BACKEND_SERVICE/$BACKEND_SERVICE:latest --timeout=600s
 
 # Deploy to Cloud Run
 echo "🚀 Deploying to Cloud Run..."
