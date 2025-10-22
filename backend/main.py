@@ -22,17 +22,23 @@ users = [
 def home():
     """Welcome endpoint"""
     return jsonify({
-        "message": "Welcome to the Simple E-commerce API",
-        "version": "1.0.0",
-        "timestamp": datetime.now().isoformat()
+        "success": True,
+        "data": {
+            "message": "Welcome to the Simple E-commerce API",
+            "version": "1.0.0",
+            "timestamp": datetime.now().isoformat()
+        }
     })
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
+        "success": True,
+        "data": {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat()
+        }
     })
 
 # Product endpoints
