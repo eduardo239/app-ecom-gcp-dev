@@ -54,7 +54,7 @@ terraform/
    gcloud auth login
 
    # Set your project ID
-   gcloud config set project YOUR_PROJECT_ID
+   gcloud config set project app-xyz-dev
 
    # Enable billing on your project (required)
    ```

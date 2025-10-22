@@ -50,11 +50,13 @@ resource "google_project_service" "required_apis" {
     "sql-component.googleapis.com",
     "sqladmin.googleapis.com",
     "storage.googleapis.com",
-    "cdn.googleapis.com",
     "compute.googleapis.com",
     "artifactregistry.googleapis.com",
     "iam.googleapis.com",
-    "cloudresourcemanager.googleapis.com"
+    "cloudresourcemanager.googleapis.com",
+    "servicenetworking.googleapis.com",
+    "vpcaccess.googleapis.com",
+    "secretmanager.googleapis.com"
   ])
 
   service            = each.value
