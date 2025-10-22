@@ -1,0 +1,42 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and customize the values
+
+# Required: Your GCP Project ID
+project_id = "app-xyz-dev"
+
+# Required: Region where resources will be deployed
+region = "us-central1"
+zone   = "us-central1-a"
+
+# Environment (dev, staging, prod)
+environment = "dev"
+
+# Application name (used for resource naming)
+app_name = "ecom-app"
+
+# Database configuration
+database_tier    = "db-f1-micro"  # Use db-n1-standard-1 or higher for production
+database_version = "POSTGRES_14"
+database_name    = "ecommerce"
+database_user    = "appuser"
+
+# Cloud Run configuration
+backend_service_name = "ecom-backend"
+max_instances       = 10
+cpu_limit          = "1000m"  # 1 CPU
+memory_limit       = "512Mi"  # 512MB RAM
+
+# Frontend configuration
+frontend_bucket_name = "frontend"
+
+# Optional: Custom domain name
+# domain_name = "yourdomain.com"
+
+# Labels for resource organization
+labels = {
+  application = "ecommerce"
+  environment = "dev"
+  team       = "development"
+  managed-by = "terraform"
+  cost-center = "engineering"
+}

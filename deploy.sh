@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-PROJECT_ID="your-gcp-project-id"
+PROJECT_ID="app-xyz-dev"
 REGION="us-central1"
 BACKEND_SERVICE="ecom-backend"
 FRONTEND_BUCKET="$PROJECT_ID-frontend"
